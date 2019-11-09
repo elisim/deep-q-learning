@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 def q_learning(env,
                episodes,
-               max_steps_per_episode,
+               steps_per_episode,
                alpha=0.1,
                gamma=0.6,
                epsilon=1,
@@ -15,7 +15,7 @@ def q_learning(env,
     """
     :param env: Open AI env
     :param episodes: number of episodes
-    :param max_steps_per_episode: max steps per episode
+    :param steps_per_episode: max steps per episode
     :param alpha: learning rate 𝛼
     :param gamma: discount factor 𝛾,
     :param epsilon: initial epsilon
@@ -23,7 +23,6 @@ def q_learning(env,
     :param epsilon_decay: decay rate for decaying epsilon-greedy probability
     :return: Q-table for each state-action pair, and info dict for debugging & plotting
     """
-
     rewards = []  # todo: reward per episode
 
     # initialize the Q-table for each state-action pair
@@ -35,11 +34,11 @@ def q_learning(env,
         state = env.reset()  # get initial state s
         epsilon = max(min_epsilon, epsilon*(epsilon_decay ** i))  # decaying epsilon-greedy probability
         
-        while not done and curr_steps < max_steps_per_episode:
+        while not done and curr_steps < steps_per_episode:
             if random.uniform(0, 1) < epsilon:
-                action = env.action_space.sample() # Explore action space
+                action = env.action_space.sample()  # Explore action space
             else:
-                action = np.argmax(q_table[state]) # Exploit learned values
+                action = np.argmax(q_table[state])  # Exploit learned values
                 
             next_state, reward, done, _ = env.step(action)
             if done:
@@ -54,10 +53,5 @@ def q_learning(env,
             state = next_state
             curr_steps += 1
 
-            
     info = {"rewards": rewards, "q_table_500_steps": None, "q_table_2000_steps": None}
     return q_table, info
-
-
-def deep_q_learning():
-    pass
