@@ -12,11 +12,7 @@ import warnings
 tf.get_logger().setLevel(tf.logging.ERROR)
 warnings.filterwarnings("ignore")
 
-
 __all__ = ['DQNAgent']
-
-# Todo:
-# 1. add second neural network
 
 
 class DQNAgent:
@@ -30,7 +26,8 @@ class DQNAgent:
                  min_epsilon=0.01,
                  epsilon_decay=0.995,
                  learning_rate=0.001,
-                 experience_replay_size=2000):
+                 experience_replay_size=2000,
+                 steps_update_target_model=32):
         """
         :param env: Open AI env
         :param gamma: discount factor 𝛾,
@@ -39,6 +36,7 @@ class DQNAgent:
         :param epsilon_decay: decay rate for decaying epsilon-greedy probability
         :param learning_rate: learning rate for neural network optimizer
         :param experience_replay_size: experience replay size
+        :param steps_update_target_model: num of steps to update the target model (𝜃− <- 𝜃)
         """
         self.env = env
         self.state_size = env.observation_space.shape[0]
@@ -49,7 +47,9 @@ class DQNAgent:
         self.min_epsilon = min_epsilon
         self.epsilon_decay = epsilon_decay
         self.learning_rate = learning_rate
-        self.model = self._build_model()
+        self.steps_update_target_model = steps_update_target_model
+        self.q_value_model = self._build_model()  # predicting the q-value (using parameters 𝜃)
+        self.target_model = self._build_model()  # computing the targets (using an older set of parameters 𝜃−)
 
     def _build_model(self):
         """
@@ -71,7 +71,7 @@ class DQNAgent:
         if random.uniform(0, 1) < self.epsilon:
             return self.env.action_space.sample()
 
-        q_values = self.model.predict(state)[0]  # predict q-value given state
+        q_values = self.q_value_model.predict(state)[0]  # predict q-value given state
         return np.argmax(q_values)  # return action with max q-value
 
     def _sample_batch(self, batch_size):
@@ -93,14 +93,14 @@ class DQNAgent:
             if done:  # for terminal transition
                 target = reward
             else:  # for non-terminal transition
-                target = (reward + self.gamma*np.max(self.model.predict(next_state)[0]))
+                target = (reward + self.gamma*np.max(self.target_model.predict(next_state)[0]))
 
             # update y
-            target_f = self.model.predict(state)
+            target_f = self.q_value_model.predict(state)  # todo: talk to Aviv, maybe it should be self.target_model?
             target_f[0][action] = target
 
             # perform a gradient descent step
-            self.model.fit(state, target_f, epochs=1, verbose=0)
+            self.q_value_model.fit(state, target_f, epochs=1, verbose=0)
 
         # decaying epsilon-greedy probability
         self.epsilon = max(self.min_epsilon, self.epsilon*self.epsilon_decay)
@@ -123,11 +123,13 @@ class DQNAgent:
         :param steps_per_episode: max steps per episode
         :param batch_size: batch size
         """
+        steps_till_update = 1  # count number of steps to update the target network
+
         for i in tqdm(range(1, episodes+1)):
             # get initial state s
             state = self._correct_state_size(self.env.reset())
 
-            for step in range(steps_per_episode):
+            for step in range(1, steps_per_episode):
                 # select action using 𝜀-greedy method
                 action = self._sample_action(state)
 
@@ -148,6 +150,13 @@ class DQNAgent:
                 # sample random minibatch, update y, and perform gradient descent step
                 self._replay(batch_size)
 
+                # every 'steps_update_target_model' steps, update target network (𝜃− <- 𝜃)
+                if steps_till_update % self.steps_update_target_model == 0:
+                    self.target_model.set_weights(self.q_value_model.get_weights())
+                    steps_till_update = 1
+
+                steps_till_update += 1
+
     def test_agent(self, episodes):
         """
         test the agent on a new episode with the trained model
@@ -159,6 +168,6 @@ class DQNAgent:
 
             while not done:
                 state = self._correct_state_size(state)
-                action = np.argmax(self.model.predict(state)[0])
+                action = np.argmax(self.q_value_model.predict(state)[0])
                 state, reward, done, _ = self.env.step(action)
                 self.env.render()
