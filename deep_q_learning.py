@@ -29,7 +29,8 @@ class DQNAgent:
                  epsilon=1.0,
                  min_epsilon=0.01,
                  epsilon_decay=0.995,
-                 learning_rate=0.001,):
+                 learning_rate=0.001,
+                 experience_replay_size=2000):
         """
         :param env: Open AI env
         :param gamma: discount factor 𝛾,
@@ -37,13 +38,14 @@ class DQNAgent:
         :param min_epsilon: min epsilon rate (end of decaying)
         :param epsilon_decay: decay rate for decaying epsilon-greedy probability
         :param learning_rate: learning rate for neural network optimizer
+        :param experience_replay_size: experience replay size
         """
         self.env = env
         self.state_size = env.observation_space.shape[0]
         self.action_size = env.action_space.n
-        self.experience_replay = deque(maxlen=2000)
-        self.gamma = gamma  # discount rate
-        self.epsilon = epsilon  # exploration rate
+        self.experience_replay = deque(maxlen=experience_replay_size)
+        self.gamma = gamma
+        self.epsilon = epsilon
         self.min_epsilon = min_epsilon
         self.epsilon_decay = epsilon_decay
         self.learning_rate = learning_rate
