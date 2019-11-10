@@ -27,7 +27,8 @@ class DQNAgent:
                  epsilon_decay=0.995,
                  learning_rate=0.001,
                  experience_replay_size=2000,
-                 steps_update_target_model=32):
+                 steps_update_target_model=32,
+                 num_layers=3):
         """
         :param env: Open AI env
         :param gamma: discount factor 𝛾,
@@ -37,6 +38,7 @@ class DQNAgent:
         :param learning_rate: learning rate for neural network optimizer
         :param experience_replay_size: experience replay size
         :param steps_update_target_model: num of steps to update the target model (𝜃− <- 𝜃)
+        :param num_layers: number of layers to the model (could be 3 or 5)
         """
         self.env = env
         self.state_size = env.observation_space.shape[0]
@@ -48,6 +50,7 @@ class DQNAgent:
         self.epsilon_decay = epsilon_decay
         self.learning_rate = learning_rate
         self.steps_update_target_model = steps_update_target_model
+        self.num_layers = num_layers
         self.q_value_model = self._build_model()  # predicting the q-value (using parameters 𝜃)
         self.target_model = self._build_model()  # computing the targets (using an older set of parameters 𝜃−)
 
@@ -60,6 +63,11 @@ class DQNAgent:
         model = Sequential()
         model.add(Dense(units=32, input_dim=self.state_size, activation='relu'))
         model.add(Dense(units=32, activation='relu'))
+        model.add(Dense(units=32, activation='relu'))
+        model.add(Dense(units=32, activation='relu'))
+        if self.num_layers == 5:
+            model.add(Dense(units=32, activation='relu'))
+            model.add(Dense(units=32, activation='relu'))
         model.add(Dense(units=self.action_size, activation='linear'))
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         return model
