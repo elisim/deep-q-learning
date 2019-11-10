@@ -16,25 +16,37 @@ warnings.filterwarnings("ignore")
 __all__ = ['DQNAgent']
 
 # Todo:
-# 1. run the model on cartpole
-# 2. check things with ipdb
-# 3. add second neural network
+# 1. add second neural network
 
 
 class DQNAgent:
     """
     Basic DQN algorithm
     """
-    def __init__(self, env):
+    def __init__(self,
+                 env,
+                 gamma=0.95,
+                 epsilon=1.0,
+                 min_epsilon=0.01,
+                 epsilon_decay=0.995,
+                 learning_rate=0.001,):
+        """
+        :param env: Open AI env
+        :param gamma: discount factor 𝛾,
+        :param epsilon: initial epsilon
+        :param min_epsilon: min epsilon rate (end of decaying)
+        :param epsilon_decay: decay rate for decaying epsilon-greedy probability
+        :param learning_rate: learning rate for neural network optimizer
+        """
         self.env = env
         self.state_size = env.observation_space.shape[0]
         self.action_size = env.action_space.n
         self.experience_replay = deque(maxlen=2000)
-        self.gamma = 0.95  # discount rate
-        self.epsilon = 1.0  # exploration rate
-        self.min_epsilon = 0.01
-        self.epsilon_decay = 0.995
-        self.learning_rate = 0.001
+        self.gamma = gamma  # discount rate
+        self.epsilon = epsilon  # exploration rate
+        self.min_epsilon = min_epsilon
+        self.epsilon_decay = epsilon_decay
+        self.learning_rate = learning_rate
         self.model = self._build_model()
 
     def _build_model(self):
@@ -52,7 +64,7 @@ class DQNAgent:
 
     def _sample_action(self, state):
         """
-        choose an action with decaying 𝜀-greedy method
+        choose an action with decaying 𝜀-greedy method, given state 'state'
         """
         if random.uniform(0, 1) < self.epsilon:
             return self.env.action_space.sample()
@@ -62,12 +74,14 @@ class DQNAgent:
 
     def _sample_batch(self, batch_size):
         """
-        sample a minibatch randomly from the experience_replay
+        sample a minibatch randomly from the experience_replay in 'batch_size' size
         """
         return random.sample(self.experience_replay, batch_size)
 
     def _replay(self, batch_size):
-
+        """
+        sample random minibatch, update y, and perform gradient descent step
+        """
         # wait for 'experience_replay' to contain at least 'batch_size' transitions
         if len(self.experience_replay) <= batch_size:
             return
@@ -102,6 +116,10 @@ class DQNAgent:
                     ):
         """
         train the agent with the DQN algorithm
+
+        :param episodes: number of episodes
+        :param steps_per_episode: max steps per episode
+        :param batch_size: batch size
         """
         for i in tqdm(range(1, episodes+1)):
             # get initial state s
@@ -131,6 +149,7 @@ class DQNAgent:
     def test_agent(self, episodes):
         """
         test the agent on a new episode with the trained model
+        :param episodes: number of episodes
         """
         for _ in range(episodes):
             state = self.env.reset()
