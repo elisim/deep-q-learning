@@ -171,3 +171,4 @@ class DQNAgent:
                 action = np.argmax(self.q_value_model.predict(state)[0])
                 state, reward, done, _ = self.env.step(action)
                 self.env.render()
+        self.env.close()
