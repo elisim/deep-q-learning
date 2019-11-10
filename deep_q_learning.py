@@ -6,6 +6,15 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 from tqdm import tqdm
 
+# turn off warnings and tensorflow logging  
+import tensorflow as tf
+import warnings
+tf.get_logger().setLevel(tf.logging.ERROR)
+warnings.filterwarnings("ignore")
+
+
+__all__ = ['DQNAgent']
+
 # Todo:
 # 1. run the model on cartpole
 # 2. check things with ipdb
@@ -16,10 +25,10 @@ class DQNAgent:
     """
     Basic DQN algorithm
     """
-    def __init__(self, env, state_size, action_size):
+    def __init__(self, env):
         self.env = env
-        self.state_size = state_size
-        self.action_size = action_size
+        self.state_size = env.observation_space.shape[0]
+        self.action_size = env.action_space.n
         self.experience_replay = deque(maxlen=2000)
         self.gamma = 0.95  # discount rate
         self.epsilon = 1.0  # exploration rate
@@ -47,10 +56,9 @@ class DQNAgent:
         """
         if random.uniform(0, 1) < self.epsilon:
             return self.env.action_space.sample()
-        act_values = self.model.predict(state)  # predict q-value given state
-        import ipdb
-        ipdb.set_trace() # what is act_values?
-        return np.argmax(act_values[0])  # returns action
+
+        q_values = self.model.predict(state)[0]  # predict q-value given state
+        return np.argmax(q_values)  # return action with max q-value
 
     def _sample_batch(self, batch_size):
         """
@@ -59,6 +67,11 @@ class DQNAgent:
         return random.sample(self.experience_replay, batch_size)
 
     def _replay(self, batch_size):
+
+        # wait for 'experience_replay' to contain at least 'batch_size' transitions
+        if len(self.experience_replay) <= batch_size:
+            return
+
         minibatch = self._sample_batch(batch_size)
         for state, action, reward, next_state, done in minibatch:
             if done:  # for terminal transition
@@ -76,6 +89,12 @@ class DQNAgent:
         # decaying epsilon-greedy probability
         self.epsilon = max(self.min_epsilon, self.epsilon*self.epsilon_decay)
 
+    def _correct_state_size(self, state):
+        """
+        correct state size from (state_size,) to (1, state_size) for the network
+        """
+        return np.reshape(state, [1, self.state_size])
+
     def train_agent(self,
                     episodes,
                     steps_per_episode,
@@ -85,30 +104,40 @@ class DQNAgent:
         train the agent with the DQN algorithm
         """
         for i in tqdm(range(1, episodes+1)):
-            state = self.env.reset() # get initial state s
-            import ipdb
-            ipdb.set_trace()  # what is state shape now?
-            state = np.reshape(state, [1, self.state_size])
+            # get initial state s
+            state = self._correct_state_size(self.env.reset())
+
             for step in range(steps_per_episode):
                 # select action using 𝜀-greedy method
                 action = self._sample_action(state)
 
                 # execute action in emulator and observe reward, next state, and episode termination signal
                 next_state, reward, done, _ = self.env.step(action)
+                next_state = self._correct_state_size(next_state)
 
                 # store transition in replay memory
                 self.experience_replay.append((state, action, reward, next_state, done))
-                state = np.reshape(next_state, [1, self.state_size])
 
+                # update current state to next state
+                state = next_state
+
+                # break episode on terminal state
                 if done:
                     break
 
-                if len(self.experience_replay) > batch_size:
-                    self._replay(batch_size)
+                # sample random minibatch, update y, and perform gradient descent step
+                self._replay(batch_size)
 
-    def test_agent(self):
+    def test_agent(self, episodes):
         """
         test the agent on a new episode with the trained model
         """
-        pass
+        for _ in range(episodes):
+            state = self.env.reset()
+            done = False
 
+            while not done:
+                state = self._correct_state_size(state)
+                action = np.argmax(self.model.predict(state)[0])
+                state, reward, done, _ = self.env.step(action)
+                self.env.render()
