@@ -1,7 +1,7 @@
 from tqdm import tqdm
 
 
-class TestResults(object):
+class TestResults():
     def __init__(self, rewards, good, bad):
         self._rewards = rewards
         self._good = good
