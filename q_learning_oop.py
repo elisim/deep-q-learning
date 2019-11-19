@@ -14,48 +14,38 @@ class TrainResults(object):
 
 
 class QLearningAgent(Agent):
-    def __init__(self, env):
+    def __init__(self,
+                 env,
+                 epsilon,
+                 min_epsilon,
+                 epsilon_decay,
+                 gamma,
+                 alpha):
         self._env = env
         self._q_table = np.zeros([self._env.observation_space.n, self._env.action_space.n])
+        self._epsilon = epsilon
+        self._min_epsilon = min_epsilon
+        self._epsilon_decay = epsilon_decay
+        self._gamma = gamma
+        self._alpha = alpha
 
-    def train(self, episodes,
-              steps_per_episode,
-              alpha=0.1,
-              gamma=0.6,
-              epsilon=1,
-              min_epsilon=0.1,
-              epsilon_decay=0.999):
+    def training_choose_action(self, state):
+        if random.uniform(0, 1) < self._epsilon:
+            return self._env.action_space.sample()  # Explore action space
+        else:
+            return np.argmax(self._q_table[state])  # Exploit learned values
 
-        rewards = 0
+    def update_on_step_result(self, reward, state, action, next_state, done):
+        if done:
+            target = reward
+        else:
+            target = reward + self._gamma * np.max(self._q_table[next_state])
 
-        for i in tqdm(range(1, episodes + 1)):
-            done = False  # indicating if the returned state is a terminal state
-            curr_steps = 0  # init current steps for this episode
-            state = self._env.reset()  # get initial state s
-            epsilon = max(min_epsilon, epsilon * (epsilon_decay ** i))  # decaying epsilon-greedy probability
+        # update rule for q-value
+        self._q_table[state, action] = (1 - self._alpha) * self._q_table[state, action] + self._alpha * target
 
-            while not done and curr_steps < steps_per_episode:
-                if random.uniform(0, 1) < epsilon:
-                    action = self._env.action_space.sample()  # Explore action space
-                else:
-                    action = np.argmax(self._q_table[state])  # Exploit learned values
+    def episode_start(self, episode_number):
+        self._epsilon = max(self._min_epsilon, self._epsilon * (self._epsilon_decay ** episode_number))  # decaying epsilon-greedy probability
 
-                next_state, reward, done, _ = self._env.step(action)
-
-                rewards += reward
-                if done:
-                    target = reward
-                else:
-                    target = reward + gamma * np.max(self._q_table[next_state])
-
-                # update rule for q-value
-                self._q_table[state, action] = (1 - alpha) * self._q_table[state, action] + alpha * target
-
-                # go to next state and increment steps
-                state = next_state
-                curr_steps += 1
-
-        return TrainResults(rewards)
-
-    def choose_action(self, state):
+    def testing_choose_action(self, state):
         return np.argmax(self._q_table[state])

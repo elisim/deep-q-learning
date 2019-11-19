@@ -5,5 +5,5 @@ class Agent(ABC):
     def train(self):
         pass
 
-    def choose_action(self):
+    def testing_choose_action(self):
         pass
