@@ -55,7 +55,7 @@ class TrainRunner(object):
 
         rewards = 0
 
-        for episode_number in tqdm(range(1, episodes + 1)):
+        for episode_number in range(1, episodes + 1):
             done = False  # indicating if the returned state is a terminal state
             curr_steps = 0  # init current steps for this episode
             state = self._env.reset()  # get initial state s
