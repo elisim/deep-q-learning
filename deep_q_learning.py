@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import random
 import numpy as np
 from collections import deque
@@ -98,7 +99,7 @@ class DQNAgent:
         """
         return random.sample(self.experience_replay, batch_size)
 
-    def _replay(self, batch_size, step_number):
+    def _replay(self, batch_size, total_step_number, step):
         """
         sample random minibatch, update y, and perform gradient descent step
         """
@@ -111,7 +112,9 @@ class DQNAgent:
         states_in_batch = []
         target_in_batch = []
         for state, action, reward, next_state, done in minibatch:
-            if done:  # for terminal transition
+            if done and step < 500:  # for terminal transition
+                target = 0
+            elif done:
                 target = reward
             else:  # for non-terminal transition
                 target = (reward + self.gamma*np.max(self.target_model.predict(next_state)[0]))
@@ -124,14 +127,18 @@ class DQNAgent:
             target_in_batch.append(target_f[0])
 
         # perform a gradient descent for entire batch
-        self.q_value_model.fit(np.array(states_in_batch),
-                               np.array(target_in_batch),
-                               batch_size=batch_size,
-                               epochs=step_number + 1,
-                               initial_epoch=step_number,
-                               verbose=0,
-                               use_multiprocessing=True,
-                               callbacks=[self._tensorboard_callback])
+        fit_result = self.q_value_model.fit(np.array(states_in_batch),
+                                            np.array(target_in_batch),
+                                            batch_size=batch_size,
+                                            epochs=1,
+                                            # epochs=step_number + 1,
+                                            # initial_epoch=step_number,
+                                            verbose=0,
+                                            use_multiprocessing=True,
+                                            # callbacks=[self._tensorboard_callback]
+                                            )
+        loss = fit_result.history['loss'][0]
+        tf.summary.scalar('step loss', data=loss, step=total_step_number)
 
         # decaying epsilon-greedy probability
         self.epsilon = max(self.min_epsilon, self.epsilon*self.epsilon_decay)
@@ -162,7 +169,7 @@ class DQNAgent:
             state = self._correct_state_size(self.env.reset())
 
             reward_in_episode = 0
-            for step in range(1, steps_per_episode):
+            for step in range(1, steps_per_episode + 1):
                 # select action using 𝜀-greedy method
                 action = self._sample_action(state)
 
@@ -183,7 +190,7 @@ class DQNAgent:
                     break
 
                 # sample random minibatch, update y, and perform gradient descent step
-                self._replay(batch_size, total_steps)
+                self._replay(batch_size, total_steps, step)
 
                 # every 'steps_update_target_model' steps, update target network (𝜃− <- 𝜃)
                 if steps_till_update % self.steps_update_target_model == 0:
