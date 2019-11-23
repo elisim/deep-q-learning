@@ -34,7 +34,7 @@ class QLearningAgent(Agent):
         else:
             return np.argmax(self._q_table[state])  # Exploit learned values
 
-    def update_on_step_result(self, reward, state, action, next_state, done):
+    def update_on_step_result(self, reward, state, action, next_state, done, global_step_number):
         if done:
             target = reward
         else:
@@ -48,3 +48,6 @@ class QLearningAgent(Agent):
 
     def testing_choose_action(self, state):
         return np.argmax(self._q_table[state])
+
+    def get_q_table(self):
+        return self._q_table.copy()
