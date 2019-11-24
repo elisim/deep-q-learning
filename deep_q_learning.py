@@ -75,7 +75,6 @@ class DQNAgent:
         model.add(Dense(units=32, input_dim=self.state_size, activation='relu'))
         model.add(Dense(units=32, activation='relu'))
         model.add(Dense(units=32, activation='relu'))
-        model.add(Dense(units=32, activation='relu'))
         if self.num_layers == 5:
             model.add(Dense(units=32, activation='relu'))
             model.add(Dense(units=32, activation='relu'))
@@ -134,7 +133,6 @@ class DQNAgent:
                                             # epochs=step_number + 1,
                                             # initial_epoch=step_number,
                                             verbose=0,
-                                            use_multiprocessing=True,
                                             # callbacks=[self._tensorboard_callback]
                                             )
         loss = fit_result.history['loss'][0]
@@ -202,7 +200,10 @@ class DQNAgent:
 
             tf.summary.scalar('reward', data=reward_in_episode, step=i)
             self._last_100_rewards.append(reward_in_episode)
-            print(f'episode reward: {reward_in_episode} reward of last 100 episodes: {statistics.mean(self._last_100_rewards)}')
+            avg100 = statistics.mean(self._last_100_rewards)
+
+            tf.summary.scalar('avg 100 reward', data=avg100, step=i)
+            print(f'episode reward: {reward_in_episode} reward of last 100 episodes: {avg100}')
 
     def test_agent(self, episodes):
         """
