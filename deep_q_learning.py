@@ -5,13 +5,13 @@ from collections import deque
 from tqdm import tqdm
 import datetime
 import statistics
+import time
 
-# turn off warnings and tensorflow logging  
 import tensorflow as tf
 
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import Adam
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.optimizers import Adam
 
 
 import warnings
@@ -26,14 +26,14 @@ class DQNAgent:
     """
     def __init__(self,
                  env,
-                 gamma=0.95,
+                 gamma=1,
                  epsilon=1.0,
                  min_epsilon=0.01,
                  epsilon_decay=0.995,
                  learning_rate=0.001,
-                 experience_replay_size=2000,
+                 experience_replay_size=100000,
                  steps_update_target_model=32,
-                 num_layers=3):
+                 num_layers=5):
         """
         :param env: Open AI env
         :param gamma: discount factor 𝛾,
@@ -60,9 +60,9 @@ class DQNAgent:
         self.target_model = self._build_model()  # computing the targets (using an older set of parameters 𝜃−)
 
         self._log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        self._tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=self._log_dir, histogram_freq=1)
-        self._file_writer = tf.summary.create_file_writer(self._log_dir + "/metrics")
-        self._file_writer.set_as_default()
+        # self._tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=self._log_dir, histogram_freq=1)
+        self._file_writer = tf.summary.FileWriter(self._log_dir + "/metrics")
+        # self._file_writer.set_as_default()
         self._last_100_rewards = deque(maxlen=100)
 
     def _build_model(self):
@@ -136,10 +136,11 @@ class DQNAgent:
                                             # callbacks=[self._tensorboard_callback]
                                             )
         loss = fit_result.history['loss'][0]
-        tf.summary.scalar('step loss', data=loss, step=total_step_number)
+        self._log_scalar('step loss', value=loss, step=total_step_number)
 
         # decaying epsilon-greedy probability
         self.epsilon = max(self.min_epsilon, self.epsilon*self.epsilon_decay)
+        self._log_scalar('epsilon', value=self.epsilon, step=total_step_number)
 
     def _correct_state_size(self, state):
         """
@@ -163,6 +164,7 @@ class DQNAgent:
         total_steps = 1
 
         for i in tqdm(range(1, episodes+1)):
+            start = time.time()
             # get initial state s
             state = self._correct_state_size(self.env.reset())
 
@@ -198,12 +200,13 @@ class DQNAgent:
                 steps_till_update += 1
                 total_steps += 1
 
-            tf.summary.scalar('reward', data=reward_in_episode, step=i)
+            self._log_scalar('reward', value=reward_in_episode, step=i)
             self._last_100_rewards.append(reward_in_episode)
             avg100 = statistics.mean(self._last_100_rewards)
 
-            tf.summary.scalar('avg 100 reward', data=avg100, step=i)
-            print(f'episode reward: {reward_in_episode} reward of last 100 episodes: {avg100}')
+            self._log_scalar('avg 100 reward', value=avg100, step=i)
+            end = time.time()
+            print(f'episode reward: {reward_in_episode} reward of last 100 episodes: {avg100}, time: {end-start}')
 
     def test_agent(self, episodes):
         """
@@ -220,3 +223,8 @@ class DQNAgent:
                 state, reward, done, _ = self.env.step(action)
                 self.env.render()
         self.env.close()
+
+    def _log_scalar(self, tag, value, step):
+        summary = tf.Summary(value=[tf.Summary.Value(tag=tag,
+                                                     simple_value=value)])
+        self._file_writer.add_summary(summary, step)
