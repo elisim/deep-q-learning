@@ -82,7 +82,7 @@ class DDQNAgent:
         model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         return model
 
-    def _sample_action(self, state):
+    def _sample_action_and_choose_model(self, state):
         """
         1. Choose which model is used to predict and which to evaluate.
         2. Choose an action with decaying 𝜀-greedy method, given state 'state'
@@ -180,7 +180,7 @@ class DDQNAgent:
             reward_in_episode = 0
             for step in range(1, steps_per_episode + 1):
                 # select action using 𝜀-greedy method
-                action, value_model, target_model = self._sample_action(state)
+                action, value_model, target_model = self._sample_action_and_choose_model(state)
 
                 # execute action in emulator and observe reward, next state, and episode termination signal
                 next_state, reward, done, _ = self.env.step(action)
