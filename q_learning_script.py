@@ -3,24 +3,6 @@ import random
 import csv
 import gym
 
-class TestResults():
-    def __init__(self, rewards, good, bad):
-        self._rewards = rewards
-        self._good = good
-        self._bad = bad
-
-    @property
-    def rewards(self):
-        return self._rewards
-
-    @property
-    def good(self):
-        return self._good
-
-    @property
-    def bad(self):
-        return self._bad
-
 
 class QLearningAgent:
     def __init__(self,
@@ -121,7 +103,7 @@ class QLearningAgent:
                     else:
                         bad += 1
 
-        return TestResults(rewards, good, bad)
+        return good, bad
 
 
 if __name__ == '__main__':
