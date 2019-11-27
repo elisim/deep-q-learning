@@ -116,3 +116,8 @@ if __name__ == '__main__':
                            min_epsilon=0.08832403884569218,
                            epsilon_decay=0.9999392953141722)
     agent.train(episodes_to_snapshot_q=[500, 2000])
+
+    print("Done training, testing on 1000 episodes:")
+    good, bad = agent.test(1000)
+
+    print(f'{good} good games, {bad} bad games')

@@ -6,6 +6,7 @@ from tqdm import tqdm
 import datetime
 import statistics
 import time
+import gym
 
 import tensorflow as tf
 
@@ -231,3 +232,13 @@ class DDQNAgent:
         summary = tf.Summary(value=[tf.Summary.Value(tag=tag,
                                                      simple_value=value)])
         self._file_writer.add_summary(summary, step)
+
+
+if __name__ == '__main__':
+    cartpole_env = gym.make("CartPole-v1").env
+
+    agent = DDQNAgent(env=cartpole_env)
+    print("Agent Created")
+
+    agent.train_agent(episodes=50000, steps_per_episode=500, batch_size=32)
+    print("Training Done")
