@@ -2,6 +2,7 @@ import numpy as np
 import random
 import csv
 import gym
+import optuna
 
 
 class QLearningAgent:
@@ -76,7 +77,6 @@ class QLearningAgent:
 
             steps_taken = 100 if reward == 0 else curr_steps
             stats_log.append({"episode": episode_number, "reward": reward, "steps": steps_taken})
-            print(f'Episode {episode_number} Reward: {reward}  Steps: {curr_steps-1}')
 
         if csv_path is not None:
             with open(csv_path, 'w', newline='') as csvfile:
@@ -104,6 +104,29 @@ class QLearningAgent:
                         bad += 1
 
         return good, bad
+    
+    
+def optimize(n_trials=500):
+    def objective(trial):
+        """
+        Define an objective function to be minimized.
+        """
+        frozen_lake_env = gym.make("FrozenLake-v0").env
+        model_params = {
+              "alpha": trial.suggest_uniform("alpha", 0.2, 0.3),
+              "gamma": trial.suggest_uniform("gamma", 0.8, 0.999),
+              "min_epsilon": trial.suggest_uniform("min_epsilon", 0.01, 0.1),
+              "epsilon_decay": trial.suggest_uniform("epsilon_decay", 0.8, 0.99999)
+        }
+        agent = QLearningAgent(frozen_lake_env, epsilon=1, **model_params)
+        agent.train()
+        good, bad = agent.test(1000)
+        return bad # A objective value linked with the Trial object.
+    
+    study = optuna.create_study()  # Create a new study.
+    optuna.logging.disable_default_handler()
+    study.optimize(objective, n_trials=n_trials, n_jobs=-1)  # Invoke optimization of the objective function.
+    return study.best_params
 
 
 if __name__ == '__main__':
