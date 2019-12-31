@@ -9,6 +9,7 @@ import time
 import gym
 
 import tensorflow as tf
+tf.get_logger().setLevel(tf.logging.ERROR)
 
 from keras.models import Sequential
 from keras.layers import Dense
@@ -164,7 +165,7 @@ class DQNAgent:
         steps_till_update = 1  # count number of steps to update the target network
         total_steps = 1
 
-        for i in tqdm(range(1, episodes+1)):
+        for i in range(1, episodes+1):
             start = time.time()
             # get initial state s
             state = self._correct_state_size(self.env.reset())
@@ -207,7 +208,7 @@ class DQNAgent:
 
             self._log_scalar('avg 100 reward', value=avg100, step=i)
             end = time.time()
-            print(f'episode reward: {reward_in_episode} reward of last 100 episodes: {avg100}, time: {end-start}')
+            print(f'Episode Reward: {reward_in_episode} Reward of last 100 episodes: {avg100:.2f}, Time: {(end-start):.2f}')
 
     def test_agent(self, episodes):
         """

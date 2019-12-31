@@ -1,3 +1,5 @@
+import warnings
+warnings.filterwarnings("ignore")
 import numpy as np
 import random
 from tqdm import tqdm
@@ -6,11 +8,11 @@ from tqdm import tqdm
 def q_learning(env,
                episodes,
                steps_per_episode,
-               alpha=0.1,
-               gamma=0.6,
+               alpha=0.279458040604177,
+               gamma=0.9932380015539644,
                epsilon=1,
-               min_epsilon=0.1,
-               epsilon_decay=0.999,
+               min_epsilon=0.08832403884569218,
+               epsilon_decay=0.9999392953141722,
                ):
     """
     :param env: Open AI env
